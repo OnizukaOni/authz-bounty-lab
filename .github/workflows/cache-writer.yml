@@ -1,0 +1,28 @@
+name: Cache writer for owned test repository
+
+on:
+  workflow_call:
+    inputs:
+      label:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  writer:
+    if: github.repository == 'OnizukaOni/authz-bounty-lab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    cache-mode: write
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf 'Owned repository cache permission test\n' > cache-probe/marker.txt
+      - name: Attempt to save marker
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: authz-probe-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.label }}
