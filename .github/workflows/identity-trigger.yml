@@ -1,0 +1,20 @@
+name: Identity trigger
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger identity target via API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run identity-target.yml \
+            --repo ${{ github.repository }} \
+            --ref main
