@@ -1,0 +1,37 @@
+name: Cache permissions baseline
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  allowed:
+    runs-on: ubuntu-latest
+    cache-mode: write
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}" > cache-probe/marker.txt
+
+      - name: Save with write permission
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: baseline-write-${{ github.run_id }}-${{ github.run_attempt }}
+
+  restricted:
+    runs-on: ubuntu-latest
+    cache-mode: read
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}" > cache-probe/marker.txt
+
+      - name: Attempt save with read permission
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: baseline-read-${{ github.run_id }}-${{ github.run_attempt }}
