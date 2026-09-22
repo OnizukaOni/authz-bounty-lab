@@ -1,9 +1,5 @@
 name: reusable-secret-test
-on:
-  workflow_call:
-    secrets:
-      MY_SECRET:
-        required: true
+on: workflow_call
 jobs:
   check:
     runs-on: ubuntu-latest
