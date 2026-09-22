@@ -8,7 +8,6 @@ permissions: {}
 jobs:
   save:
     runs-on: ubuntu-latest
-    cache-mode: write
     steps:
       - name: Create harmless marker
         run: |
@@ -19,4 +18,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: reusable-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          key: reusable-inherited-read-${{ github.run_id }}-${{ github.run_attempt }}
