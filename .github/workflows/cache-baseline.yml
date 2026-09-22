@@ -13,7 +13,8 @@ jobs:
       - name: Create harmless marker
         run: |
           mkdir -p cache-probe
-          printf '%s\n' "baseline-${GITHUB_RUN_ID}" > cache-probe/marker.txt
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
 
       - name: Save with write permission
         uses: actions/cache/save@v4
@@ -23,15 +24,45 @@ jobs:
 
   restricted:
     runs-on: ubuntu-latest
-    cache-mode: none
+    cache-mode: read
     steps:
       - name: Create harmless marker
         run: |
           mkdir -p cache-probe
-          printf '%s\n' "baseline-${GITHUB_RUN_ID}" > cache-probe/marker.txt
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
 
-      - name: Attempt save with no cache permission
+      - name: Attempt save with read permission
         uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: baseline-none-${{ github.run_id }}-${{ github.run_attempt }}
+          key: baseline-read-${{ github.run_id }}-${{ github.run_attempt }}
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: [allowed, restricted]
+    cache-mode: read
+    steps:
+      - name: Try restore write key
+        id: restore-write
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe-write
+          key: baseline-write-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Show write marker
+        if: steps.restore-write.outputs.cache-hit == 'true'
+        run: cat cache-probe-write/marker.txt
+
+      - name: Try restore read key
+        id: restore-read
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe-read
+          key: baseline-read-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Show read marker
+        if: steps.restore-read.outputs.cache-hit == 'true'
+        run: cat cache-probe-read/marker.txt
