@@ -1,31 +1,28 @@
 name: Cache reusable caller
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 permissions: {}
 
-cache-mode: read
+cache-mode: write
 
 jobs:
   call-child:
     uses: ./.github/workflows/cache-reusable-child.yml
 
-  verify-child:
+  caller-save:
     runs-on: ubuntu-latest
-    needs: [call-child]
-    cache-mode: read
+    cache-mode: write
     steps:
-      - name: Check child-wf-write
-        uses: actions/cache/restore@v4
+      - name: Create marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "caller-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+      - name: Attempt save
+        uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: child-wf-write-${{ github.run_id }}-${{ github.run_attempt }}
-          fail-on-cache-miss: false
-
-      - name: Check child-job-write
-        uses: actions/cache/restore@v4
-        with:
-          path: cache-probe
-          key: child-job-write-${{ github.run_id }}-${{ github.run_attempt }}
-          fail-on-cache-miss: false
+          key: from-caller-${{ github.run_id }}-${{ github.run_attempt }}
