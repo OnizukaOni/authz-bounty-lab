@@ -1,0 +1,64 @@
+name: Cache read boundary check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    if: github.repository == 'OnizukaOni/authz-bounty-lab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    cache-mode: write
+    steps:
+      - name: Create harmless marker
+        shell: bash
+        run: |
+          mkdir -p cache-read-probe
+          printf 'probe-%s-%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
+            > cache-read-probe/marker.txt
+
+      - name: Save test cache
+        uses: actions/cache/save@v4
+        with:
+          path: cache-read-probe
+          key: read-boundary-${{ github.run_id }}-${{ github.run_attempt }}
+
+  positive:
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    cache-mode: read
+    outputs:
+      hit: ${{ steps.restore.outputs.cache-hit }}
+      marker: ${{ steps.check.outputs.marker }}
+    steps:
+      - name: Restore with read permission
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-read-probe
+          key: read-boundary-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Check restored marker
+        id: check
+        shell: bash
+        run: |
+          expected="probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [ -f cache-read-probe/marker.txt ] &&
+             [ "$(cat cache-read-probe/marker.txt)" = "$expected" ]; then
+            echo "marker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "marker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  restricted:
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    cache-mode: write-only
+    outputs:
+      hit:
