@@ -11,10 +11,10 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger identity target via API
+      - name: Trigger identity env target via API
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run identity-target.yml \
+          gh workflow run identity-env-target.yml \
             --repo ${{ github.repository }} \
             --ref main
