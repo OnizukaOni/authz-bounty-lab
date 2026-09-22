@@ -15,7 +15,6 @@ jobs:
     if: github.repository == 'OnizukaOni/authz-bounty-lab'
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    cache-mode: write
     steps:
       - name: Create harmless marker
         run: |
