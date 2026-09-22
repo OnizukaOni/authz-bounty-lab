@@ -38,31 +38,36 @@ jobs:
           path: cache-probe
           key: baseline-read-${{ github.run_id }}-${{ github.run_attempt }}
 
-  verify:
+  verify-write:
     runs-on: ubuntu-latest
-    needs: [allowed, restricted]
+    needs: [allowed]
     cache-mode: read
     steps:
       - name: Try restore write key
-        id: restore-write
+        id: restore
         uses: actions/cache/restore@v4
         with:
-          path: cache-probe-write
+          path: cache-probe
           key: baseline-write-${{ github.run_id }}-${{ github.run_attempt }}
           fail-on-cache-miss: false
 
       - name: Show write marker
-        if: steps.restore-write.outputs.cache-hit == 'true'
-        run: cat cache-probe-write/marker.txt
+        if: steps.restore.outputs.cache-hit == 'true'
+        run: cat cache-probe/marker.txt
 
+  verify-read:
+    runs-on: ubuntu-latest
+    needs: [restricted]
+    cache-mode: read
+    steps:
       - name: Try restore read key
-        id: restore-read
+        id: restore
         uses: actions/cache/restore@v4
         with:
-          path: cache-probe-read
+          path: cache-probe
           key: baseline-read-${{ github.run_id }}-${{ github.run_attempt }}
           fail-on-cache-miss: false
 
       - name: Show read marker
-        if: steps.restore-read.outputs.cache-hit == 'true'
-        run: cat cache-probe-read/marker.txt
+        if: steps.restore.outputs.cache-hit == 'true'
+        run: cat cache-probe/marker.txt
