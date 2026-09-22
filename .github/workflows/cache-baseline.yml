@@ -71,3 +71,66 @@ jobs:
       - name: Show read marker
         if: steps.restore.outputs.cache-hit == 'true'
         run: cat cache-probe/marker.txt
+
+  none-attempt:
+    runs-on: ubuntu-latest
+    cache-mode: none
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+
+      - name: Attempt save with none permission
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: baseline-none-${{ github.run_id }}-${{ github.run_attempt }}
+
+  none-forced:
+    runs-on: ubuntu-latest
+    cache-mode: none
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "baseline-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+
+      - name: Attempt save with spoofed mode env
+        uses: actions/cache/save@v4
+        env:
+          ACTIONS_CACHE_MODE: "garbage"
+        with:
+          path: cache-probe
+          key: baseline-none-forced-${{ github.run_id }}-${{ github.run_attempt }}
+
+  verify-none:
+    runs-on: ubuntu-latest
+    needs: [none-attempt, none-forced]
+    cache-mode: read
+    steps:
+      - name: Try restore none-attempt key
+        id: r1
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: baseline-none-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Show none-attempt marker
+        if: steps.r1.outputs.cache-hit == 'true'
+        run: cat cache-probe/marker.txt
+
+      - name: Try restore none-forced key
+        id: r2
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: baseline-none-forced-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Show none-forced marker
+        if: steps.r2.outputs.cache-hit == 'true'
+        run: cat cache-probe/marker.txt
