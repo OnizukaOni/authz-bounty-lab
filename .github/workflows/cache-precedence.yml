@@ -1,0 +1,79 @@
+name: Cache permissions precedence
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+cache-mode: read
+
+jobs:
+  wf-read-job-write:
+    runs-on: ubuntu-latest
+    cache-mode: write
+    steps:
+      - name: Create marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "prec-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+      - name: Attempt save
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: prec-wfjw-${{ github.run_id }}-${{ github.run_attempt }}
+
+  wf-read-job-none:
+    runs-on: ubuntu-latest
+    cache-mode: none
+    steps:
+      - name: Create marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "prec-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+      - name: Attempt save
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: prec-wfjn-${{ github.run_id }}-${{ github.run_attempt }}
+
+  wf-read-job-inherit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "prec-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          cat cache-probe/marker.txt
+      - name: Attempt save
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: prec-wfji-${{ github.run_id }}-${{ github.run_attempt }}
+
+  verify:
+    runs-on: ubuntu-latest
+    needs: [wf-read-job-write, wf-read-job-none, wf-read-job-inherit]
+    cache-mode: read
+    steps:
+      - name: Check wfjw (wf=read, job=write)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: prec-wfjw-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Check wfjn (wf=read, job=none)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: prec-wfjn-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Check wfji (wf=read, job=inherit)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: prec-wfji-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
