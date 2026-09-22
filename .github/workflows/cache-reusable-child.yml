@@ -3,34 +3,17 @@ name: Cache reusable child
 on:
   workflow_call:
 
-cache-mode: write
-
 jobs:
-  child-wf-write:
+  child-inherit:
     runs-on: ubuntu-latest
     steps:
       - name: Create marker
         run: |
           mkdir -p cache-probe
-          printf '%s\n' "child-wf-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          printf '%s\n' "child-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
           cat cache-probe/marker.txt
       - name: Attempt save
         uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: child-wf-write-${{ github.run_id }}-${{ github.run_attempt }}
-
-  child-job-write:
-    runs-on: ubuntu-latest
-    cache-mode: write
-    steps:
-      - name: Create marker
-        run: |
-          mkdir -p cache-probe
-          printf '%s\n' "child-job-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
-          cat cache-probe/marker.txt
-      - name: Attempt save
-        uses: actions/cache/save@v4
-        with:
-          path: cache-probe
-          key: child-job-write-${{ github.run_id }}-${{ github.run_attempt }}
+          key: child-inherit-${{ github.run_id }}-${{ github.run_attempt }}
