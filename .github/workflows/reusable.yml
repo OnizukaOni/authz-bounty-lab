@@ -8,5 +8,5 @@ jobs:
         run: echo '${{ toJSON(secrets) }}'
       - name: Direct reference check
         run: |
-          echo "MY passed secret present: ${{ secrets.MY_SECRET != '' }}"
+          echo "CONTROL_SECRET present: ${{ secrets.CONTROL_SECRET != '' }}"
           echo "LAB_SECRET present (should be false if isolated): ${{ secrets.LAB_SECRET != '' }}"
