@@ -1,30 +1,46 @@
 name: zstdmt dependency test
 
 on:
-  workflow_dispatch:   # ручной запуск
+  workflow_dispatch:
 
 jobs:
   test-cache:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Show zstd / zstdmt presence
-        run: |
-          echo "=== which zstd ==="
-          which zstd || echo "zstd not found"
-          echo "=== which zstdmt ==="
-          which zstdmt || echo "zstdmt not found"
-          echo "=== zstd version ==="
-          zstd --version || true
-
-      - name: Create dummy files to cache
+      - name: Prepare test data
         run: |
           mkdir -p dummy-cache
           echo "test data" > dummy-cache/file.txt
+          command -v zstd
+          command -v zstdmt
+          zstd --version
 
-      - name: Try to save cache (uses @actions/cache under the hood)
-        uses: actions/cache@v4
+      - name: BASELINE - save with zstdmt
+        uses: actions/cache/save@v4
         with:
           path: dummy-cache
-          key: zstdmt-test-${{ github.run_id }}
+          key: zstdmt-present-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Hide zstdmt and verify zstd still works
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while command -v zstdmt >/dev/null 2>&1; do
+            tool_path="$(command -v zstdmt)"
+            echo "Hiding: $tool_path"
+            sudo mv -- "$tool_path" "${tool_path}.disabled-for-test"
+            hash -r
+          done
+
+          echo "Verified: zstdmt is absent from PATH"
+          command -v zstd
+          zstd --version
+          printf 'compression test\n' | zstd -T0 -c > "$RUNNER_TEMP/zstd-check.zst"
+          zstd -t "$RUNNER_TEMP/zstd-check.zst"
+
+      - name: REPRO - save without zstdmt
+        uses: actions/cache/save@v4
+        with:
+          path: dummy-cache
+          key: zstdmt-absent-${{ github.run_id }}-${{ github.run_attempt }}
