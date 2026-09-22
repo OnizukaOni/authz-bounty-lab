@@ -1,0 +1,30 @@
+name: zstdmt dependency test
+
+on:
+  workflow_dispatch:   # ручной запуск
+
+jobs:
+  test-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show zstd / zstdmt presence
+        run: |
+          echo "=== which zstd ==="
+          which zstd || echo "zstd not found"
+          echo "=== which zstdmt ==="
+          which zstdmt || echo "zstdmt not found"
+          echo "=== zstd version ==="
+          zstd --version || true
+
+      - name: Create dummy files to cache
+        run: |
+          mkdir -p dummy-cache
+          echo "test data" > dummy-cache/file.txt
+
+      - name: Try to save cache (uses @actions/cache under the hood)
+        uses: actions/cache@v4
+        with:
+          path: dummy-cache
+          key: zstdmt-test-${{ github.run_id }}
