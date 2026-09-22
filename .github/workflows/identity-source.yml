@@ -1,0 +1,19 @@
+name: Identity source
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump source identity
+        run: |
+          echo "=== SOURCE ==="
+          echo "event_name=${{ github.event_name }}"
+          echo "actor=${{ github.actor }}"
+          echo "triggering_actor=${{ github.triggering_actor }}"
+          echo "sender=${{ github.event.sender.login }}"
+          echo "ref=${{ github.ref }}"
