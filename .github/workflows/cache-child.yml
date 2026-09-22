@@ -1,0 +1,22 @@
+name: Cache child
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    cache-mode: write
+    steps:
+      - name: Create harmless marker
+        run: |
+          mkdir -p cache-probe
+          printf '%s\n' "reusable-${GITHUB_RUN_ID}" > cache-probe/marker.txt
+
+      - name: Attempt cache save
+        uses: actions/cache/save@v4
+        with:
+          path: cache-probe
+          key: reusable-probe-${{ github.run_id }}-${{ github.run_attempt }}
