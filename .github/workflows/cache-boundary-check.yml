@@ -35,6 +35,7 @@ jobs:
           path: cache-probe
           key: authz-probe-${{ github.run_id }}-${{ github.run_attempt }}-positive
           lookup-only: true
+
       - name: Look up restricted cache
         id: restricted
         uses: actions/cache/restore@v4
@@ -42,18 +43,21 @@ jobs:
           path: cache-probe
           key: authz-probe-${{ github.run_id }}-${{ github.run_attempt }}-restricted
           lookup-only: true
+
       - name: Record observations without credentials
         env:
           POSITIVE_HIT: ${{ steps.positive.outputs.cache-hit }}
           RESTRICTED_HIT: ${{ steps.restricted.outputs.cache-hit }}
           POSITIVE_JOB: ${{ needs.positive.result }}
           RESTRICTED_JOB: ${{ needs.restricted.result }}
+        shell: bash
         run: |
           {
             printf 'Positive job: %s\n\n' "$POSITIVE_JOB"
             printf 'Restricted job: %s\n\n' "$RESTRICTED_JOB"
             printf 'Positive cache hit: %s\n\n' "$POSITIVE_HIT"
             printf 'Restricted cache hit: %s\n\n' "$RESTRICTED_HIT"
+
             if [ "$POSITIVE_HIT" != 'true' ]; then
               printf 'INCONCLUSIVE: positive control did not establish cache operation.\n'
             elif [ "$RESTRICTED_HIT" = 'true' ]; then
