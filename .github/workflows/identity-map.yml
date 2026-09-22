@@ -1,0 +1,25 @@
+name: Identity map
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Identity source"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump identity fields
+        run: |
+          echo "=== MAP ==="
+          echo "event_name=${{ github.event_name }}"
+          echo "actor=${{ github.actor }}"
+          echo "triggering_actor=${{ github.triggering_actor }}"
+          echo "sender=${{ github.event.sender.login }}"
+          echo "workflow_run.actor=${{ github.event.workflow_run.actor.login }}"
+          echo "workflow_run.triggering_actor=${{ github.event.workflow_run.triggering_actor.login }}"
+          echo "workflow_run.event=${{ github.event.workflow_run.event }}"
+          echo "workflow_run.head_branch=${{ github.event.workflow_run.head_branch }}"
