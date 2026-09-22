@@ -1,0 +1,18 @@
+name: Identity env target
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  protected:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Dump identity
+        run: |
+          echo "=== ENV TARGET ==="
+          echo "actor=${{ github.actor }}"
+          echo "triggering_actor=${{ github.triggering_actor }}"
+          echo "sender=${{ github.event.sender.login }}"
