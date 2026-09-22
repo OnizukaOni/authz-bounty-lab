@@ -1,0 +1,11 @@
+name: Cache caller restriction
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  call:
+    cache-mode: read
+    uses: ./.github/workflows/cache-child.yml
