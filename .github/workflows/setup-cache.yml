@@ -1,0 +1,15 @@
+name: Setup Target Cache
+on: workflow_dispatch
+
+jobs:
+  create-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Dummy File
+        run: echo "CONFIDENTIAL_MARKER_LAB_12345" > secret.txt
+
+      - name: Save Cache
+        uses: actions/cache/save@v4
+        with:
+          path: secret.txt
+          key: lab-secret-cache-v1
