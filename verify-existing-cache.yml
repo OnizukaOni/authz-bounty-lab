@@ -1,0 +1,28 @@
+name: Verify existing lab cache
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    cache-mode: read
+    steps:
+      - uses: actions/cache/restore@v4
+        id: restore
+        with:
+          path: cache-read-probe
+          key: read-boundary-35704605098-1
+
+      - name: Verify exact cache and marker
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        run: |
+          test "$CACHE_HIT" = true
+          test -f cache-read-probe/marker.txt
+          test "$(cat cache-read-probe/marker.txt)" = 'probe-35704605098-1'
+          echo 'Source cache hit: true; source marker verified: true' >> "$GITHUB_STEP_SUMMARY"
