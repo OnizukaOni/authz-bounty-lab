@@ -6,42 +6,48 @@ on:
 permissions: {}
 
 jobs:
-  trace-write:
+  seed:
     runs-on: ubuntu-latest
     cache-mode: write
-    env:
-      ACTIONS_STEP_DEBUG: "true"
     steps:
-      - name: Create harmless marker
+      - name: Create marker
         run: |
           mkdir -p cache-probe
-          printf '%s\n' "trace-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          printf '%s\n' "seed-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
           cat cache-probe/marker.txt
-
-      - name: Save with write permission
+      - name: Save
         uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: trace-write-${{ github.run_id }}-${{ github.run_attempt }}
+          key: wo-seed-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Show cache env (no secrets)
-        run: |
-          env | grep -i '^ACTIONS_' | grep -viE 'TOKEN|URL|SECRET|KEY|SIGNATURE' | sort
-
-  trace-read:
+  write-only-save:
     runs-on: ubuntu-latest
-    cache-mode: read
-    env:
-      ACTIONS_STEP_DEBUG: "true"
+    cache-mode: write-only
     steps:
-      - name: Create harmless marker
+      - name: Create marker
         run: |
           mkdir -p cache-probe
-          printf '%s\n' "trace-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
+          printf '%s\n' "wo-${GITHUB_RUN_ID}-${GITHUB_JOB}" > cache-probe/marker.txt
           cat cache-probe/marker.txt
-
-      - name: Attempt save with read permission
+      - name: Attempt save
         uses: actions/cache/save@v4
         with:
           path: cache-probe
-          key: trace-read-${{ github.run_id }}-${{ github.run_attempt }}
+          key: wo-writeonly-${{ github.run_id }}-${{ github.run_attempt }}
+
+  write-only-restore:
+    runs-on: ubuntu-latest
+    cache-mode: write-only
+    steps:
+      - name: Attempt restore of seed key
+        id: r
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-probe
+          key: wo-seed-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: false
+
+      - name: Show marker if restored
+        if: steps.r.outputs.cache-hit == 'true'
+        run: cat cache-probe/marker.txt
