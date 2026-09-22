@@ -45,6 +45,7 @@ jobs:
 
       - name: Check restored marker
         id: check
+        if: always()
         shell: bash
         run: |
           expected="probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -61,4 +62,64 @@ jobs:
     timeout-minutes: 5
     cache-mode: write-only
     outputs:
-      hit:
+      hit: ${{ steps.restore.outputs.cache-hit }}
+      marker: ${{ steps.check.outputs.marker }}
+    steps:
+      - name: Attempt restore with write-only permission
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-read-probe
+          key: read-boundary-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Check restored marker
+        id: check
+        if: always()
+        shell: bash
+        run: |
+          expected="probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [ -f cache-read-probe/marker.txt ] &&
+             [ "$(cat cache-read-probe/marker.txt)" = "$expected" ]; then
+            echo "marker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "marker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    if: always() && github.repository == 'OnizukaOni/authz-bounty-lab'
+    needs: [seed, positive, restricted]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    cache-mode: none
+    steps:
+      - name: Record results
+        env:
+          SEED_JOB: ${{ needs.seed.result }}
+          POSITIVE_JOB: ${{ needs.positive.result }}
+          RESTRICTED_JOB: ${{ needs.restricted.result }}
+          POSITIVE_HIT: ${{ needs.positive.outputs.hit }}
+          POSITIVE_MARKER: ${{ needs.positive.outputs.marker }}
+          RESTRICTED_HIT: ${{ needs.restricted.outputs.hit }}
+          RESTRICTED_MARKER: ${{ needs.restricted.outputs.marker }}
+        shell: bash
+        run: |
+          {
+            printf 'Seed job: %s\n\n' "$SEED_JOB"
+            printf 'Positive job: %s\n\n' "$POSITIVE_JOB"
+            printf 'Restricted job: %s\n\n' "$RESTRICTED_JOB"
+            printf 'Positive cache hit: %s\n\n' "$POSITIVE_HIT"
+            printf 'Positive marker verified: %s\n\n' "$POSITIVE_MARKER"
+            printf 'Restricted cache hit: %s\n\n' "$RESTRICTED_HIT"
+            printf 'Restricted marker verified: %s\n\n' "$RESTRICTED_MARKER"
+
+            if [ "$POSITIVE_HIT" != 'true' ] ||
+               [ "$POSITIVE_MARKER" != 'true' ]; then
+              printf 'INCONCLUSIVE: positive control did not restore the expected marker.\n'
+            elif [ "$RESTRICTED_MARKER" = 'true' ]; then
+              printf 'REVIEW REQUIRED: write-only job restored the expected marker.\n'
+            elif [ "$RESTRICTED_HIT" = 'true' ]; then
+              printf 'REVIEW REQUIRED: write-only job reported a cache hit without the expected marker.\n'
+            else
+              printf 'No restricted restore observed. Review restricted logs to establish the reason.\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
